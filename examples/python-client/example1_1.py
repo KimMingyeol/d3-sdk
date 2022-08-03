@@ -4,9 +4,12 @@ from datetime import datetime
 import json
 from turtle import Turtle
 import keyboard
+from sensor_event import imu_listener
+import argparse
 
 # 20220726 Nkmg
 # Example1: Simple Control; version 1; more than one input possible
+# add "-imu" argument if you want to track imu data
 # Type 'socat TCP-LISTEN:22023 UNIX-CONNECT:/tmp/doubleapi' on D3 terminal before run this code.
 
 serverName = '141.223.209.154'
@@ -15,12 +18,17 @@ clientSocket = None
 
 ptime = None
 
+parser = argparse.ArgumentParser()
+parser.add_argument('-imu', dest="imu", action="store_true")
+args = parser.parse_args()
+
+imu_listeneing = args.imu
+
 def make_command(command, data=None, conv_str=False):
     packet = { 'c': command }
     if data is not None:
         packet['d'] = data
     return json.dumps(packet)
-
 
 if __name__ == '__main__':
     clientSocket = socket(AF_INET, SOCK_STREAM)
@@ -33,6 +41,10 @@ if __name__ == '__main__':
     clientSocket.send(packet.encode('utf-8'))
     time.sleep(2)
     print("setting done")
+
+    if imu_listeneing:
+        imuListenerThread = imu_listener.IMUListener(clientSocket)
+        imuListenerThread.start()
 
     while True:
         ctime = datetime.now()
@@ -91,15 +103,26 @@ if __name__ == '__main__':
         
         if (throttle != 0 or turn != 0) or is_moving == True:
             packet = make_command('navigate.drive', {
-"throttle": throttle,
-"turn": turn
-})
+            "throttle": throttle*0.3,
+            "turn": turn*0.5
+            })
             clientSocket.send(packet.encode('utf-8'))
-            print(ctime, "command sent", throttle, turn)
+            # print(ctime, "command sent", throttle, turn)
         
         if throttle != 0 or turn != 0:
             is_moving = True
         else:
             is_moving = False
 
+        if keyboard.is_pressed('q'):
+            break
+        
         time.sleep(0.2)
+    
+    if imu_listeneing:
+        while imuListenerThread.qpressed == False:
+            time.sleep(0.1)
+        imuListenerThread.join()
+    
+    print("socket closed.")
+    clientSocket.close()

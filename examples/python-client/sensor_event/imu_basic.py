@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # 20220729 Nkmg
-# IMU-basic: Tracking IMU sensor data from d3 robot
+# IMU-basic: Tracking IMU sensor data from d3 robot with Plotting
 # Type 'socat TCP-LISTEN:22022 UNIX-CONNECT:/tmp/doubleapi' on D3 terminal before run this code.
 
 rtp_queue = None
